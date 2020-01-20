@@ -12,7 +12,7 @@ import Board
 penalty = [0,0]
 gameDone = False
 timer = [0, 0]
-TIME_MAX = 5
+TIME_MAX = 10
 
 def createMQ(key):
 	try : 
@@ -24,7 +24,7 @@ def createMQ(key):
 	return mq
 
 def finish(m):
-	if terminaleMode : 
+	if developMode : 
 		if m != "" :
 			print("Fini ! le joueur", m,"a gagné")
 		else :
@@ -34,7 +34,7 @@ def finish(m):
 		vmq.send(m.encode(), type = 5)
 
 def display(id,hand) :
-	if terminaleMode : 
+	if developMode : 
 		print(hand)
 	else : 
 		m = id
@@ -78,7 +78,7 @@ def getInput(id1, id2, sem):
 				sendTo = id2
 				break
 
-			if terminaleMode :	
+			if developMode :	
 				if kb.kbhit():
 					c = kb.getch()
 					if ord(c) == 27: # ESC
@@ -166,14 +166,12 @@ def Play(id, hand, keyPack, sem):
 			m = m.decode()
 		except sysv_ipc.ExistentialError:
 			break
-		print(m)
 		# Lock the get input
 		sem.acquire()
-		print("playe", id, "je prend")
 		
 		if m == "penalty":
 			# If penalty
-			if terminaleMode :
+			if developMode :
 				print("Penalité joueur",id, "!")
 			m = id+":penalty:"+str(len(hand))
 			bmq.send(m.encode(), type=3)
@@ -207,22 +205,23 @@ def Play(id, hand, keyPack, sem):
 		display(id, hand)
 		# Unlock the getInput
 		sem.release()
-		print("playe", id, "je lache")
 
 
 if __name__ == "__main__" :
-	terminaleMode = False
+	developMode = False
 	if len(sys.argv)>1:
-		if sys.argv[1] == 'terminale':
-			terminaleMode = True
+		TIME_MAX = int(sys.argv[1])
+		if len(sys.argv) == 3 :
+			if sys.argv[2] == '-d':
+				developMode = True
 
 	bmq = createMQ(60)
 	vmq = createMQ(40)
 
-	b = Process(target=Board.Board, args=(terminaleMode,))
+	b = Process(target=Board.Board, args=(developMode,))
 	b.start()
 	
-	if not terminaleMode :
+	if not developMode :
 		v = Process(target=View.View)
 		v.start()
 	
@@ -282,5 +281,5 @@ if __name__ == "__main__" :
 
 		# Remove queue
 		b.join()
-		if not terminaleMode:
+		if not developMode:
 			v.join()
