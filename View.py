@@ -21,13 +21,19 @@ def View() :
 				textRect.centerx = (544-nbcard*44) + i*88 
 				textRect.centery = 140
 				screen.blit(key, textRect)	
+		
 		if int(id) == 3 :
-			pygame.draw.rect(screen,BACKGROUND_COLOR,(456,220,88,160))
+			pygame.draw.rect(screen,BACKGROUND_COLOR,(456,220,554,160))
 			card = m[0].split(" ")
 			carte = pygame.image.load("carte/"+card[0]+"_"+card[1]+".png").convert_alpha()
 			perso_x = 456
 			perso_y = 220
 			screen.blit(carte, (perso_x, perso_y)) 
+			for i in range(int(m[1])):
+				carte = pygame.image.load("carte/Dos.png").convert_alpha()
+				perso_x = 700 + i*10
+				perso_y = 220
+				screen.blit(carte, (perso_x, perso_y)) 
 		
 		if int(id) == 2 :
 			pygame.draw.rect(screen,BACKGROUND_COLOR,(60,420,880,160))
@@ -51,7 +57,7 @@ def View() :
 			text= "Le joueur "+m+" a gagné"
 		else : 
 			text= "Aucun jouer n'a gagné"
-		pygame.draw.rect(screen,BACKGROUND_COLOR,(456,220,88,160))
+		pygame.draw.rect(screen,BACKGROUND_COLOR,(456,220,880,160))
 		text = font.render(text, True, (255, 255, 255))
 		textRect = text.get_rect()
 		textRect.centerx = screen.get_rect().centerx
