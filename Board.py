@@ -57,8 +57,7 @@ def Board(terminaleMode):
 		pile.append(Carte("Bleu", i))
 	
 	randint = random.randint(0, (len(pile)-1))
-	#stack.append(pile.pop(randint))
-	stack.append(pile[10])
+	stack.append(pile.pop(randint))
 
 	# Send the key autorise for each player
 	keyPackP1 = "1:a:z:e:r:t:y:u:i:o:p"	# Pack off the key used by player 1
@@ -67,21 +66,30 @@ def Board(terminaleMode):
 	bmq.send(keyPackP2.encode(), type = 10)
 
 	# Send the hand of each player
-	msghand1 = str(pile[0])+":"+str(pile[2])+":"+str(pile[4])+":"+str(pile[6])+":"+str(pile[8])
-	#str(pile.pop(random.randint(0, (len(pile)-1))))
+	msghand1 = str(pile.pop(random.randint(0, (len(pile)-1))))
 	msghand2 = str(pile.pop(random.randint(0, (len(pile)-1))))
+
 	for i in range(4):
-	#	msghand1 += ":"+str(pile.pop(random.randint(0, (len(pile)-1))))
+		msghand1 += ":"+str(pile.pop(random.randint(0, (len(pile)-1))))
 		msghand2 += ":"+str(pile.pop(random.randint(0, (len(pile)-1))))	
 	bmq.send(msghand1.encode(), type = 9)
 	bmq.send(msghand2.encode(), type = 9)
 	
 	displayBoard(stack[len(stack)-1], vmq, terminaleMode)
-	playerWon = 0
 	while True : 
 		# Waiting for a player message
-		m, t = bmq.receive(type = 3)
+		try : 
+			m, t = bmq.receive(type = 3)
+		except sysv_ipc.ExistentialError :
+			break
 		m = m.decode().split(":")
+
+		if m[1] == "gameDone":
+			# If a player has finished
+			bmq.send(m[0].encode(), type=7)
+			break
+
+		
 		if m[1] == "penalty" : 
 			#If it is a penality
 			if m[2] != str(10):
@@ -91,7 +99,10 @@ def Board(terminaleMode):
 			else :
 				card = ""
 				bmq.send(card.encode(), type = int(m[0]))
-			if len(pile)==0:		
+			if len(pile)==0:
+				empty =""
+				bmq.send(empty.encode(), type = int(m[0]))
+				bmq.send(empty.encode(), type = 7)		
 				break	
 		else :
 			if checkCard(m[1], stack[len(stack)-1]) :
@@ -100,28 +111,22 @@ def Board(terminaleMode):
 				card = m[1].split(" ")
 				stack.append(Carte(card[0], int(card[1])))
 				displayBoard(stack[len(stack)-1], vmq, terminaleMode)
-				if m[2]== "1": 							
-					# If it is the last card of the player
-					playerWon = m[0]
-					break
-			else :	
-				# If the card is wrong
-				if len(pile)==0:						
+			else :
+				if len(pile)==0:				
+					empty = ""
+					bmq.send(empty.encode(), type = int(m[0]))
+					bmq.send(empty.encode(), type = 7)
 					break	# Pile empty 
-				else :
+				else: 
+					# If the card is wrong
 					if m[2] == str(10) :
 						# If the limit of card is reached
-						msg = "faux"
+						msg = ""
 						bmq.send(msg.encode(), type = int(m[0]))
 					else : 
 						# Else, send a new card
 						card = str(pile.pop(random.randint(0,len(pile)-1)))
 						bmq.send(card.encode(), type = int(m[0]))
 
-	if playerWon !=0:
-		print("Le joueur", playerWon, "a gagné")
-	else :
-		print("Partie finie, aucun joueur n'a gagné")
 
-	bmq.send(playerWon.encode(), type = 7)
 
