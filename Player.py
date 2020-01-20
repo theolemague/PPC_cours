@@ -1,12 +1,10 @@
-from multiprocessing import Process, Manager, Array
+from multiprocessing import Process, Manager
 import threading
-import queue
 import sysv_ipc
 import sys
 import random
 import time
 import kbhit
-import os
 import View
 import Board
 
