@@ -89,7 +89,6 @@ def Board(terminaleMode):
 			bmq.send(m[0].encode(), type=7)
 			break
 
-		
 		if m[1] == "penalty" : 
 			#If it is a penality
 			if m[2] != str(10):
