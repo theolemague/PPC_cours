@@ -10,8 +10,11 @@ import os
 import View
 import Board
 
-
-endgame = False
+# Global var
+penalty = [0,0]
+gameDone = False
+timer = [0, 0]
+TIME_MAX = 5
 
 def createMQ(key):
 	try : 
@@ -41,10 +44,7 @@ def display(id,hand) :
 			m += ":"+key+"-"+card
 		vmq.send(m.encode(), type = 3)
 
-penalty = [0,0]
 
-timer = [0, 0]
-TIME_MAX = 5
 
 def getInput(id1, id2, sem):
 	global penalty
@@ -53,21 +53,35 @@ def getInput(id1, id2, sem):
 	
 	kb = kbhit.KBHit()
 	
-	timer[id2-1] = threading.Timer(TIME_MAX, timeUp, args=str(id2)) # Start a timer of 10s
-	timer[id2-1].start()
+	# Wait the start
+	sem.acquire()	
 	
-	timer[id1-1] = threading.Timer(TIME_MAX, timeUp, args=str(id1)) # Start a timer of 10s
+	sendTo = 1
+	timer[id1-1] = threading.Timer(TIME_MAX, timeUp, args=str(id1))
 	timer[id1-1].start()
-	
+	timer[id2-1] = threading.Timer(TIME_MAX, timeUp, args=str(id2)) 
+	timer[id2-1].start()
 	while not gameQuit:
-		# Wait that the player release the semaphore
-		sendTo = 1
-		sem.acquire()	
+
 		k = ""
 		keyUsed1 = list(hand1)
 		keyUsed2 = list(hand2)
+
 		while True :
-			if terminaleMode : 
+			if penalty[id1-1] == 1 :
+				# If penality, wait end of the penality and update hand
+				penalty[id1-1] = 0
+				k = "penalty"
+				sendTo = id1
+				break
+			if penalty[id2-1] == 1 :
+				# If penality, wait end of the penality and update hand
+				penalty[id2-1] = 0
+				k = "penalty"
+				sendTo = id2
+				break
+
+			if terminaleMode :	
 				if kb.kbhit():
 					c = kb.getch()
 					if ord(c) == 27: # ESC
@@ -78,58 +92,51 @@ def getInput(id1, id2, sem):
 						k = str(c)
 			else:
 				try :
-					m , t = vmq.receive(type = 1)
+					m , t = vmq.receive(block= False, type = 1)
 					k = m.decode()
+				except sysv_ipc.BusyError:
+					pass
 				except sysv_ipc.ExistentialError :
 					gameQuit = True
 					bmq.remove()
 					break
+			
 			if k in keyUsed1 :
 				sendTo = id1
 				timer[id1-1].cancel()
-				timer[id1-1] = threading.Timer(TIME_MAX, timeUp, args=str(id1)) # Start a timer of 10s
-				timer[id1-1].start()
 				break
-			if k in keyUsed2 :
+
+			elif k in keyUsed2 :
 				sendTo = id2
 				timer[id2-1].cancel()
-				timer[id2-1] = threading.Timer(TIME_MAX, timeUp, args=str(id2)) # Start a timer of 10s
-				timer[id2-1].start()
 				break
-		
-		# Send the message
-		if penalty[sendTo-1] == 1 :
-			# If penality, wait end of the penality
-			sem.acquire()
-			penalty[sendTo-1] = 0
-			
+	
+		# Send the message		
 		if not gameQuit :
-			msg = str(k)
-			try : 
-				imq.send(msg.encode(), type = sendTo)
+			try :
+				imq.send(k.encode(), type = sendTo)
 				# Let the player take the semaphore
 			except :
 				pass
-			sem.release()
-			time.sleep(0.2)
 		else :
 			timer[id1-1].cancel()
 			timer[id2-1].cancel()
 			break
+		# Wait reponse of board
+		sem.release()
+		time.sleep(0.2)
+		sem.acquire()
+		# Restart the timer if game not ended
+		if not gameDone:
+			timer[sendTo-1]= threading.Timer(TIME_MAX, timeUp, args=str(sendTo))
+			timer[sendTo-1].start()
+	
+	
+	
 	kb.set_normal_term()
 
 def timeUp(id):
-	id = int(id)
-	penalty[int(id)-1] =1 
-	m = "penalty"
-	try :
-		imq.send(m.encode(), type = int(id))
-		timer[id-1] = threading.Timer(TIME_MAX, timeUp, args=str(id)) # Start a timer of 10s
-		timer[id-1].start()
-	except :
-		pass
-	sem.release()
-	time.sleep(0.2) # Let the player take the semaphore
+	penalty[int(id)-1] = 1 
 
 
 def removeFromHand(hand,keyPack, card):
@@ -163,11 +170,12 @@ def Play(id, hand, keyPack, sem):
 			m = m.decode()
 		except sysv_ipc.ExistentialError:
 			break
-		
+		print(m)
 		# Lock the get input
 		sem.acquire()
+		print("playe", id, "je prend")
 		
-		if m == "penalty": 
+		if m == "penalty":
 			# If penalty
 			if terminaleMode :
 				print("Penalité joueur",id, "!")
@@ -203,6 +211,7 @@ def Play(id, hand, keyPack, sem):
 		display(id, hand)
 		# Unlock the getInput
 		sem.release()
+		print("playe", id, "je lache")
 
 
 if __name__ == "__main__" :
@@ -268,6 +277,7 @@ if __name__ == "__main__" :
 			
 		# Stop all the player
 		imq.remove()
+		gameDone = True
 
 		# Stop all thread
 		getKey.join()
