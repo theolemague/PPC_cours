@@ -19,7 +19,6 @@ def Board(developMode):
 	stack = []
 	pile = []
 
-
 	"""
 	Board message queue : 
 	1 - To player 1
@@ -43,7 +42,7 @@ def Board(developMode):
 				return True
 			else : return False 
 
-	def displayBoard( developMode):
+	def displayBoard(developMode):
 		card = stack[len(stack)-1]
 		if developMode :
 			print(card)
@@ -91,7 +90,7 @@ def Board(developMode):
 
 		if m[1] == "penalty" : 
 			#If it is a penality
-			if m[2] != str(10):
+			if m[2] < str(10):
 				# If the limit of card is not reached
 				card = str(pile.pop(random.randint(0,len(pile)-1)))
 				bmq.send(card.encode(), type = int(m[0]))
@@ -117,7 +116,7 @@ def Board(developMode):
 					break	# Pile empty 
 				else: 
 					# If the card is wrong
-					if m[2] == str(10) :
+					if m[2] >= str(10) :
 						# If the limit of card is reached
 						msg = ""
 						bmq.send(msg.encode(), type = int(m[0]))
