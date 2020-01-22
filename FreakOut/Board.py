@@ -83,47 +83,50 @@ def Board(developMode):
 			break
 		m = m.decode().split(":")
 
+		# If a player has finished
 		if m[1] == "gameDone":
-			# If a player has finished
 			bmq.send(m[0].encode(), type=7)
 			break
-
-		if m[1] == "penalty" : 
-			#If it is a penality
-			if m[2] < str(10):
-				# If the limit of card is not reached
+		
+		# If a player has a penality
+		elif m[1] == "penalty" : 
+			# If the limit of card is not reached, send a card
+			if int(m[2]) < 10:
 				card = str(pile.pop(random.randint(0,len(pile)-1)))
-				bmq.send(card.encode(), type = int(m[0]))
+			# If it is, send nothing
 			else :
 				card = ""
-				bmq.send(card.encode(), type = int(m[0]))
+			bmq.send(card.encode(), type = int(m[0]))
+
+			# If pile
 			if len(pile)==0:
 				empty =""
-				bmq.send(empty.encode(), type = int(m[0]))
 				bmq.send(empty.encode(), type = 7)		
-				break	
-		else :
-			if checkCard(m[1]) :
-				# If the card is valid
-				bmq.send(m[1].encode(), type = int(m[0]))
-				card = m[1].split(" ")
-				stack.append(Carte(card[0], int(card[1])))
-			else :
-				if len(pile)==0:				
-					empty = ""
-					bmq.send(empty.encode(), type = int(m[0]))
-					bmq.send(empty.encode(), type = 7)
-					break	# Pile empty 
-				else: 
-					# If the card is wrong
-					if m[2] >= str(10) :
-						# If the limit of card is reached
-						msg = ""
-						bmq.send(msg.encode(), type = int(m[0]))
-					else : 
-						# Else, send a new card
-						card = str(pile.pop(random.randint(0,len(pile)-1)))
-						bmq.send(card.encode(), type = int(m[0]))
+				break
 
+		# Else => a player play a card 
+		else :
+			# If the card is valid, send the same card
+			if checkCard(m[1]) :
+				card = m[1].split(" ")
+				bmq.send(m[1].encode(), type = int(m[0]))
+				stack.append(Carte(card[0], int(card[1])))
+
+			else :
+				# If the limit of card is not reached, send a card
+				if int(m[2]) < 10:
+					card = str(pile.pop(random.randint(0,len(pile)-1)))
+				# If it is, send nothing
+				else :
+					card = ""
+				bmq.send(card.encode(), type = int(m[0]))
+				
+				# If pile is empty
+				if len(pile)==0:
+					empty =""
+					bmq.send(empty.encode(), type = 7)		
+					break
+
+				
 
 
