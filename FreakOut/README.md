@@ -1,6 +1,9 @@
 # Lancement du jeu
-
-Lors que le jeu est télécharger, il se lance avec la commande
+Le jeu utilise le module python pygame. Pour l'installer, il faut faire la commande suivante
+```bash
+python3 -m pip install -U pygame --user
+```
+Lors que le jeu est télécharger, il se lance avec la commande, depuis le répertoire FreakOut
 ```bash
 python3 Main.py arg1 arg2
 ```
